@@ -18,14 +18,23 @@ objectPointsArray = []
 imgPointsArray = []
 
 print("loading images")
-test = "./images/prova.jpg"
+
+
+# set different distance
 meter1 = "./1m/*.jpg"
 meter2 = "./2m/*.jpg"
 meter3 = "./3m/*.jpg"
 meter4 = "./4m/*.jpg"
+
+i = 1
+
 # Loop over the image files
 for path in glob.glob(meter2):
-    print("image loaded")
+
+    print("image " + i.__str__() + " loaded")
+
+    i = i + 1
+
     # Load the image and convert it to gray scale
     img = cv2.imread(path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
