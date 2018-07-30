@@ -24,7 +24,7 @@ meter2 = "./2m/*.jpg"
 meter3 = "./3m/*.jpg"
 meter4 = "./4m/*.jpg"
 # Loop over the image files
-for path in glob.glob(meter1):
+for path in glob.glob(meter2):
     print("image loaded")
     # Load the image and convert it to gray scale
     img = cv2.imread(path)
@@ -51,11 +51,11 @@ for path in glob.glob(meter1):
     cv2.namedWindow('image', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('image', 1366, 768)
     cv2.imshow('image', img)
-    cv2.waitKey(10000)
+    cv2.waitKey(3000)
 
 # Calibrate the camera and save the results
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPointsArray, imgPointsArray, gray.shape[::-1], None, None)
-np.savez('./images/calib.npz', mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+np.savez('./calib2.npz', mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
 
 # Print the camera calibration error
 error = 0
@@ -65,21 +65,5 @@ for i in range(len(objectPointsArray)):
     error += cv2.norm(imgPointsArray[i], imgPoints, cv2.NORM_L2) / len(imgPoints)
 
 print("Total error: ", error / len(objectPointsArray))
-
-
-img = cv2.imread("./1m/image-2018-07-30_13-44-51.jpg")
-h, w = img.shape[:2]
-
-# Obtain the new camera matrix and undistort the image
-newCameraMtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
-undistortedImg = cv2.undistort(img, mtx, dist, None, newCameraMtx)
-
-# Crop the undistorted image
-# x, y, w, h = roi
-# undistortedImg = undistortedImg[y:y + h, x:x + w]
-
-# Display the final result
-cv2.imshow('chess board', np.hstack((img, undistortedImg)))
-cv2.waitKey(10000)
 
 cv2.destroyAllWindows()

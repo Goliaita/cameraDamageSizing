@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
-import glob
 
-load = np.load("./images/calib.npz")
+load = np.load("./calib1.npz")
 
 # Load one of the test images
 img = cv2.imread("./1m/image-2018-07-30_13-44-51.jpg")
