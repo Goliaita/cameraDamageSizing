@@ -26,14 +26,19 @@ meter2 = "./2m/*.jpg"
 meter3 = "./3m/*.jpg"
 meter4 = "./4m/*.jpg"
 
-i = 1
 
 # Loop over the image files
-for path in glob.glob(meter2):
+# for i in range(1, 4):
 
-    print("image " + i.__str__() + " loaded")
+k = 1
 
-    i = i + 1
+# print("./" + i.__str__() + "/*.jpg")
+
+for path in glob.glob("./4" + "m/*.jpg"):
+
+    print("image " + k.__str__() + " loaded")
+
+    k = k + 1
 
     # Load the image and convert it to gray scale
     img = cv2.imread(path)
@@ -60,11 +65,11 @@ for path in glob.glob(meter2):
     cv2.namedWindow('image', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('image', 1366, 768)
     cv2.imshow('image', img)
-    cv2.waitKey(3000)
+    cv2.waitKey(10000)
 
 # Calibrate the camera and save the results
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPointsArray, imgPointsArray, gray.shape[::-1], None, None)
-np.savez('./calib2.npz', mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+np.savez("./calib4" + ".npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
 
 # Print the camera calibration error
 error = 0
