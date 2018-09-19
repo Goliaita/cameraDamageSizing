@@ -1,12 +1,8 @@
-import argparse
-
 import cv2
 import imutils
 import numpy as np
-from imutils import contours
 from imutils import perspective
 from scipy.spatial import distance as dist
-from matplotlib import pyplot as plt
 
 
 def midpoint(ptA, ptB):
@@ -14,35 +10,40 @@ def midpoint(ptA, ptB):
 
 
 # Load calibration data
-load = np.load("./calib3.npz")
-print(load["mtx"][0][0])
-a = load["mtx"][0][0] * 4.6 / 3296
+load = np.load("./calib4.npz")
+
+# Set distance from objective
+distance = 1
+
+# Set Pixel dimension
+pixelDim = 0.00112
+
+# Set pixel per millimeters in camera
+a = load["mtx"][0][0] * pixelDim / distance
 
 # Load one of the test images
-img = cv2.imread("./3m/image-2018-07-30_13-51-33.jpg")
+img = cv2.imread("./1m/image-2018-07-30_13-44-51.jpg")
 h, w = img.shape[:2]
 
-blurred = cv2.pyrMeanShiftFiltering(img, 31, 91)
-
-bound = 30
-inc = np.array([46.7, 36.1, 30.6])
-lower = inc - bound
-upper = inc + bound
-
+# Set an grey form of the image
 imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+# Get threshold
 ret, thresh = cv2.threshold(imgray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
 imgray = cv2.GaussianBlur(imgray, (7, 7), 0)
 
-# Obtain the new camera matrix and undistort the image
+# Obtain the new camera matrix and undistorted the image both grey and colored
 newCameraMtx, roi = cv2.getOptimalNewCameraMatrix(load["mtx"], load["dist"], (w, h), 1, (w, h))
 undistortedImgray = cv2.undistort(thresh, load["mtx"], load["dist"], None, newCameraMtx)
 undistortedImg = cv2.undistort(img, load["mtx"], load["dist"], None, newCameraMtx)
 
-_, conts, _ = cv2.findContours(undistortedImgray, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+# Get Contours
+_, conts, _ = cv2.findContours(undistortedImgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 copy = undistortedImg.copy()
 
+# Show basic photo
 cv2.drawContours(copy, conts, -1, (255, 255, 0), 3)
 cv2.namedWindow('image', cv2.WINDOW_NORMAL)
 cv2.resizeWindow('image', 1366, 768)
@@ -54,7 +55,7 @@ pixelsPerMetric = a
 for c in conts:
 
     # if the contour is not sufficiently large, ignore it
-    if 10 < cv2.contourArea(c) < 1000:
+    if 2000 < cv2.contourArea(c) < 3000:
         print(c)
 
         # compute the rotated bounding box of the contour
@@ -115,16 +116,7 @@ for c in conts:
                     (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
                     0.65, (255, 255, 255), 2)
 
-# hull = cv2.convexHull(cnt, returnPoints=ret)
-
-
-# x, y, w, h = cv2.boundingRect(ret)
-# cv2.rectangle(undistortedImg, (x, y), (x+w, y+h), (0, 255, 0), 2)
-
-# for i in range(0, len(contours)):
-# cv2.drawContours(undistortedImg, contours, -1, (255, 255, 0), 3)
-
-# Display the final result
+        # Display the final result
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('image', 1366, 768)
         cv2.imshow('image', orig)

@@ -3,8 +3,8 @@ import cv2
 import glob
 
 # Define the chess board rows and columns
-rows = 6
-cols = 9
+rows = 4
+cols = 5
 
 # Set the termination criteria for the corner sub-pixel algorithm
 criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 30, 0.001)
@@ -25,16 +25,11 @@ meter1 = "./1m/*.jpg"
 meter2 = "./2m/*.jpg"
 meter3 = "./3m/*.jpg"
 meter4 = "./4m/*.jpg"
-
-
-# Loop over the image files
-# for i in range(1, 4):
+cameraD = "./camera davide/*.jpg"
 
 k = 1
 
-# print("./" + i.__str__() + "/*.jpg")
-
-for path in glob.glob("./4" + "m/*.jpg"):
+for path in glob.glob(meter1):
 
     print("image " + k.__str__() + " loaded")
 
@@ -46,8 +41,6 @@ for path in glob.glob("./4" + "m/*.jpg"):
 
     # Find the chess board corners
     ret, corners = cv2.findChessboardCorners(gray, (rows, cols), None)
-
-    print(ret)
 
     # Make sure the chess board pattern was found in the image
     if ret:
@@ -62,14 +55,15 @@ for path in glob.glob("./4" + "m/*.jpg"):
         cv2.drawChessboardCorners(img, (rows, cols), corners, ret)
 
     # Display the image
+    """
     cv2.namedWindow('image', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('image', 1366, 768)
     cv2.imshow('image', img)
-    cv2.waitKey(10000)
-
+    cv2.waitKey(1000)
+    """
 # Calibrate the camera and save the results
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPointsArray, imgPointsArray, gray.shape[::-1], None, None)
-np.savez("./calib4" + ".npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+np.savez("./prova" + ".npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
 
 # Print the camera calibration error
 error = 0
