@@ -1,7 +1,8 @@
+import sys
+
 import cv2
 import imutils
 import numpy as np
-from imutils import perspective
 from scipy.spatial import distance as dist
 
 
@@ -9,24 +10,50 @@ def midpoint(ptA, ptB):
     return (ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5
 
 
+# TODO implement data parameter from cmd
+
+usage = 'usage: [-d distance](if not inserted is given as 1 meter)' \
+               '[-px x position pixels](find object in that area)' \
+               '[-py y position pixels](find object in that area)'
+
+if len(sys.argv) % 2 == 0:
+    exit(usage)
+else:
+    for i, arg in enumerate(sys.argv):
+        if arg == '-d':
+            try:
+                distance = float(sys.argv[i + 1])
+            except ValueError:
+                exit(usage)
+
+        elif arg == '-px':
+            try:
+                positionX = float(sys.argv[i + 1])
+            except ValueError:
+                exit(usage)
+
+        elif arg == '-py':
+            try:
+                positionY = float(sys.argv[i + 1])
+            except ValueError:
+                exit(usage)
+
+try:
+    distance
+except NameError:
+    distance = 1
+
 # Load calibration data
 load = np.load("./calib4.npz")
 
-# Set distance from objective
-distance = 1
-
-# Set Pixel dimension
-pixelDim = 0.00112
-
-# Set pixel per millimeters in camera
-a = load["mtx"][0][0] * pixelDim / distance
-
 # Load one of the test images
-img = cv2.imread("./1m/image-2018-07-30_13-44-51.jpg")
+img = cv2.imread("./4m/test1.jpg")
 h, w = img.shape[:2]
+
 
 # Set an grey form of the image
 imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
 
 # Get threshold
 ret, thresh = cv2.threshold(imgray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -50,13 +77,13 @@ cv2.resizeWindow('image', 1366, 768)
 cv2.imshow('image', copy)
 cv2.waitKey(20000)
 
-pixelsPerMetric = a
+pixelsPerMetricX = load["mtx"][0][0] / distance
+pixelsPerMetricY = load["mtx"][1][1] / distance
 
 for c in conts:
 
     # if the contour is not sufficiently large, ignore it
-    if 2000 < cv2.contourArea(c) < 3000:
-        print(c)
+    if 100 < cv2.contourArea(c) < 150:
 
         # compute the rotated bounding box of the contour
         orig = undistortedImg.copy()
@@ -68,12 +95,12 @@ for c in conts:
         # in top-left, top-right, bottom-right, and bottom-left
         # order, then draw the outline of the rotated bounding
         # box
-        box = perspective.order_points(box)
+        # box = perspective.order_points(box)
         cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
 
         # loop over the original points and draw them
-        for (x, y) in box:
-            cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
+        # for (x, y) in box:
+        #     cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
 
         # unpack the ordered bounding box, then compute the midpoint
         # between the top-left and top-right coordinates, followed by
@@ -83,38 +110,28 @@ for c in conts:
         (blbrX, blbrY) = midpoint(bl, br)
 
         # compute the midpoint between the top-left and top-right points,
-        # followed by the midpoint between the top-righ and bottom-right
+        # followed by the midpoint between the top-right and bottom-right
         (tlblX, tlblY) = midpoint(tl, bl)
         (trbrX, trbrY) = midpoint(tr, br)
 
-        # draw the midpoints on the image
-        cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
-        cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
-        cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
-        cv2.circle(orig, (int(trbrX), int(trbrY)), 5, (255, 0, 0), -1)
-
-        # draw lines between the midpoints
-        cv2.line(orig, (int(tltrX), int(tltrY)), (int(blbrX), int(blbrY)),
-                 (255, 0, 255), 2)
-        cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),
-                 (255, 0, 255), 2)
-
         dA = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
         dB = dist.euclidean((tlblX, tlblY), (trbrX, trbrY))
+        print(dA)
+        print(dB)
 
         # if the pixels per metric has not been initialized, then
         # compute it as the ratio of pixels to supplied metric
         # (in this case, inches)
-        dimA = dA / pixelsPerMetric
-        dimB = dB / pixelsPerMetric
+        dimA = dA / pixelsPerMetricX * 1000
+        dimB = dB / pixelsPerMetricY * 1000
 
         # draw the object sizes on the image
-        cv2.putText(orig, "{:.1f}mm".format(dimA),
-                    (int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65, (255, 255, 255), 2)
-        cv2.putText(orig, "{:.1f}mm".format(dimB),
-                    (int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65, (255, 255, 255), 2)
+        cv2.putText(orig, "{:.2f}mm".format(dimB),
+                    (int(tltrX - 150), int(tltrY)), cv2.QT_FONT_NORMAL,
+                    1.5, (255, 255, 255), 2)
+        cv2.putText(orig, "{:.2f}mm".format(dimA),
+                    (int(trbrX), int(trbrY - 30)), cv2.QT_FONT_NORMAL,
+                    1.5, (255, 255, 255), 2)
 
         # Display the final result
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)

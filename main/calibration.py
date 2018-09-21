@@ -3,11 +3,11 @@ import cv2
 import glob
 
 # Define the chess board rows and columns
-rows = 4
-cols = 5
+rows = 6
+cols = 9
 
 # Set the termination criteria for the corner sub-pixel algorithm
-criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 30, 0.001)
+criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 30, 0.002)
 
 # Prepare the object points: (0,0,0), (1,0,0), (2,0,0), ..., (6,5,0). They are the same for all images
 objectPoints = np.zeros((rows * cols, 3), np.float32)
@@ -19,7 +19,6 @@ imgPointsArray = []
 
 print("loading images")
 
-
 # set different distance
 meter1 = "./1m/*.jpg"
 meter2 = "./2m/*.jpg"
@@ -29,7 +28,7 @@ cameraD = "./camera davide/*.jpg"
 
 k = 1
 
-for path in glob.glob(meter1):
+for path in glob.glob(meter4):
 
     print("image " + k.__str__() + " loaded")
 
@@ -44,8 +43,10 @@ for path in glob.glob(meter1):
 
     # Make sure the chess board pattern was found in the image
     if ret:
+        print("true")
+
         # Refine the corner position
-        corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+        corners = cv2.cornerSubPix(gray, corners, (5, 5), (-1, -1), criteria)
 
         # Add the object points and the image points to the arrays
         objectPointsArray.append(objectPoints)
@@ -55,15 +56,16 @@ for path in glob.glob(meter1):
         cv2.drawChessboardCorners(img, (rows, cols), corners, ret)
 
     # Display the image
-    """
-    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('image', 1366, 768)
-    cv2.imshow('image', img)
-    cv2.waitKey(1000)
-    """
+
+    # cv2.namedWindow('image')
+    # cv2.resizeWindow('image', 1366, 768)
+    # cv2.imshow('image', img)
+    # cv2.waitKey(10000)
+
 # Calibrate the camera and save the results
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objectPointsArray, imgPointsArray, gray.shape[::-1], None, None)
-np.savez("./prova" + ".npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+print(dist)
+np.savez("./calib4" + ".npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
 
 # Print the camera calibration error
 error = 0
