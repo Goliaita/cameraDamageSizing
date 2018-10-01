@@ -3,7 +3,61 @@ import sys
 import cv2
 import imutils
 import numpy as np
-from scipy.spatial import distance as dist
+import scipy.spatial as sci
+
+
+def printarea(_c):
+    print(_c)
+    orig = undistortedImg.copy()
+    box = cv2.minAreaRect(_c)
+    box = cv2.boxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
+    box = np.array(box, dtype="int")
+
+    # order the points in the contour such that they appear
+    # in top-left, top-right, bottom-right, and bottom-left
+    # order, then draw the outline of the rotated bounding
+    # box
+    # box = perspective.order_points(box)
+    cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
+
+    # unpack the ordered bounding box, then compute the midpoint
+    # between the top-left and top-right coordinates, followed by
+    # the midpoint between bottom-left and bottom-right coordinates
+    (tl, tr, br, bl) = box
+    (tltrX, tltrY) = midpoint(tl, tr)
+    (blbrX, blbrY) = midpoint(bl, br)
+
+    # compute the midpoint between the top-left and top-right points,
+    # followed by the midpoint between the top-right and bottom-right
+    (tlblX, tlblY) = midpoint(tl, bl)
+    (trbrX, trbrY) = midpoint(tr, br)
+
+    dA = sci.distance.euclidean((tltrX, tltrY), (blbrX, blbrY))
+    dB = sci.distance.euclidean((tlblX, tlblY), (trbrX, trbrY))
+
+    print(midpoint(tr, bl))
+    print(midpoint(tl, br))
+    print(sci.distance.euclidean(midpoint(tr, bl), (1359, 2355)))
+
+    # if the pixels per metric has not been initialized, then
+    # compute it as the ratio of pixels to supplied metric
+    # (in this case, inches)
+    dimA = dA / pixelsPerMetricX * 1000
+    dimB = dB / pixelsPerMetricY * 1000
+
+    # draw the object sizes on the image
+    cv2.putText(orig, "{:.2f}mm".format(dimB),
+                (int(tltrX - 150), int(tltrY)), cv2.QT_FONT_NORMAL,
+                1.5, (255, 255, 255), 2)
+    cv2.putText(orig, "{:.2f}mm".format(dimA),
+                (int(trbrX), int(trbrY - 30)), cv2.QT_FONT_NORMAL,
+                1.5, (255, 255, 255), 2)
+
+    # Display the final result
+    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('image', 768, 1366)
+    cv2.imshow('image', orig)
+    cv2.waitKey(20000)
 
 
 def midpoint(ptA, ptB):
@@ -15,6 +69,10 @@ def midpoint(ptA, ptB):
 usage = 'usage: [-d distance](if not inserted is given as 1 meter)' \
                '[-px x position pixels](find object in that area)' \
                '[-py y position pixels](find object in that area)'
+
+
+px = None
+py = None
 
 if len(sys.argv) % 2 == 0:
     exit(usage)
@@ -28,13 +86,13 @@ else:
 
         elif arg == '-px':
             try:
-                positionX = float(sys.argv[i + 1])
+                px = float(sys.argv[i + 1])
             except ValueError:
                 exit(usage)
 
         elif arg == '-py':
             try:
-                positionY = float(sys.argv[i + 1])
+                py = float(sys.argv[i + 1])
             except ValueError:
                 exit(usage)
 
@@ -44,10 +102,10 @@ except NameError:
     distance = 1
 
 # Load calibration data
-load = np.load("./calib4.npz")
+load = np.load("./nexus5x1mP.npz")
 
 # Load one of the test images
-img = cv2.imread("./4m/test1.jpg")
+img = cv2.imread("./nexus 5x 1m portrait/test1.jpg")
 h, w = img.shape[:2]
 
 
@@ -73,70 +131,55 @@ copy = undistortedImg.copy()
 # Show basic photo
 cv2.drawContours(copy, conts, -1, (255, 255, 0), 3)
 cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('image', 1366, 768)
+cv2.resizeWindow('image', 768, 1366)
 cv2.imshow('image', copy)
 cv2.waitKey(20000)
+
 
 pixelsPerMetricX = load["mtx"][0][0] / distance
 pixelsPerMetricY = load["mtx"][1][1] / distance
 
-for c in conts:
+minMidPx = None
+minMidPy = None
+eucDist = None
+contours = None
 
-    # if the contour is not sufficiently large, ignore it
-    if 100 < cv2.contourArea(c) < 150:
+if px is not None and py is not None:
+    k = 1
+    for c in conts:
+        if cv2.contourArea(c) > 10:
+            orig = undistortedImg.copy()
+            box = cv2.minAreaRect(c)
+            box = cv2.boxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
+            box = np.array(box, dtype="int")
+            cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
+            (tl, tr, br, bl) = box
 
-        # compute the rotated bounding box of the contour
-        orig = undistortedImg.copy()
-        box = cv2.minAreaRect(c)
-        box = cv2.boxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
-        box = np.array(box, dtype="int")
+            (midX, midY) = midpoint(tl, br)
 
-        # order the points in the contour such that they appear
-        # in top-left, top-right, bottom-right, and bottom-left
-        # order, then draw the outline of the rotated bounding
-        # box
-        # box = perspective.order_points(box)
-        cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
+            if minMidPx is None and minMidPy is None:
+                minMidPx = midX
+                minMidPy = midY
+                contours = c
+                eucDist = sci.distance.euclidean((midX, midY), (px, py))
 
-        # loop over the original points and draw them
-        # for (x, y) in box:
-        #     cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
+            elif eucDist > sci.distance.euclidean((midX, midY), (px, py)):
+                print('nearest found ' + k.__str__())
+                minMidPy = midY
+                minMidPx = midX
+                contours = c
+                eucDist = sci.distance.euclidean((midX, midY), (px, py))
 
-        # unpack the ordered bounding box, then compute the midpoint
-        # between the top-left and top-right coordinates, followed by
-        # the midpoint between bottom-left and bottom-right coordinates
-        (tl, tr, br, bl) = box
-        (tltrX, tltrY) = midpoint(tl, tr)
-        (blbrX, blbrY) = midpoint(bl, br)
+        k = k + 1
 
-        # compute the midpoint between the top-left and top-right points,
-        # followed by the midpoint between the top-right and bottom-right
-        (tlblX, tlblY) = midpoint(tl, bl)
-        (trbrX, trbrY) = midpoint(tr, br)
+else:
+    for c in conts:
 
-        dA = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
-        dB = dist.euclidean((tlblX, tlblY), (trbrX, trbrY))
-        print(dA)
-        print(dB)
+        # if the contour is not sufficiently large, ignore it
+        if 500 < cv2.contourArea(c) < 100000:
 
-        # if the pixels per metric has not been initialized, then
-        # compute it as the ratio of pixels to supplied metric
-        # (in this case, inches)
-        dimA = dA / pixelsPerMetricX * 1000
-        dimB = dB / pixelsPerMetricY * 1000
+            # compute the rotated bounding box of the contour
+            printarea(c)
 
-        # draw the object sizes on the image
-        cv2.putText(orig, "{:.2f}mm".format(dimB),
-                    (int(tltrX - 150), int(tltrY)), cv2.QT_FONT_NORMAL,
-                    1.5, (255, 255, 255), 2)
-        cv2.putText(orig, "{:.2f}mm".format(dimA),
-                    (int(trbrX), int(trbrY - 30)), cv2.QT_FONT_NORMAL,
-                    1.5, (255, 255, 255), 2)
-
-        # Display the final result
-        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('image', 1366, 768)
-        cv2.imshow('image', orig)
-        cv2.waitKey(20000)
-
+printarea(contours)
 cv2.destroyAllWindows()
