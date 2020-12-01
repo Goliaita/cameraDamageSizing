@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import glob
-
+# prova
 # Define the chess board rows and columns
 rows = 4
 cols = 5
